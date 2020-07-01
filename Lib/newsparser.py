@@ -1,3 +1,4 @@
+import requests
 import logbook
 import time
 import re
@@ -7,6 +8,7 @@ import configparser
 import os
 import socket
 
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
 from selenium.common.exceptions import NoSuchElementException
@@ -44,10 +46,20 @@ class newsParserData(object):
     def __del__(self):
         self.driver.quit()
 
-    def openLink(self):
+    def getRequest(self):
+        web_r = requests.get(self.URL)
         self.driver.get(self.URL)
         self.driver.implicitly_wait(40)
         time.sleep(10)
+        #html = self.driver.execute_script("return document.documentElement.outerHTML")
+        sel_soup = BeautifulSoup(web_r.text, 'html.parser')
+        images = []
+        for i in sel_soup.findAll("img"):
+            print(i)
+            src = i["src"]
+            images.append(src)
+
+        print(images)
 
     def getElement(self):
         return self
@@ -119,7 +131,7 @@ class newsParsing(object):
         self.hostname = socket.gethostname()
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
-        self.shopeeParser = newsParserData(logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
-        self.shopeeParser.openLink()
+        self.newsParserData = newsParserData(logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
+        self.newsParserData.getRequest()
         #self.shopeeParser.getElement()
         self.logger.info("Finish %s" % self.filename)
