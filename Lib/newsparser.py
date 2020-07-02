@@ -1,3 +1,4 @@
+import requests
 import logbook
 import time
 import re
@@ -9,7 +10,10 @@ import socket
 import requests
 import urllib.request
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> d71a027c4349b9e78f41c311aaa8dff014187bcf
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
@@ -48,10 +52,20 @@ class newsParserData(object):
     def __del__(self):
         self.driver.quit()
 
-    def openLink(self):
+    def getRequest(self):
+        web_r = requests.get(self.URL)
         self.driver.get(self.URL)
         self.driver.implicitly_wait(40)
         time.sleep(10)
+        #html = self.driver.execute_script("return document.documentElement.outerHTML")
+        sel_soup = BeautifulSoup(web_r.text, 'html.parser')
+        images = []
+        for i in sel_soup.findAll("img"):
+            print(i)
+            src = i["src"]
+            images.append(src)
+
+        print(images)
 
     def findSoup(self):
         soup = BeautifulSoup(urllib.request.urlopen(self.URL), 'html.parser')
@@ -128,7 +142,7 @@ class newsParsing(object):
         self.hostname = socket.gethostname()
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
-        self.newsparser = newsParserData(logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
-        self.newsparser.openLink()
+        self.newsParserData = newsParserData(logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
+        self.newsParserData.getRequest()
         #self.shopeeParser.getElement()
         self.logger.info("Finish %s" % self.filename)
