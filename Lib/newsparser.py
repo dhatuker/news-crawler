@@ -6,7 +6,11 @@ import argparse
 import configparser
 import os
 import socket
+import requests
+import urllib.request
 
+
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
 from selenium.common.exceptions import NoSuchElementException
@@ -48,6 +52,11 @@ class newsParserData(object):
         self.driver.get(self.URL)
         self.driver.implicitly_wait(40)
         time.sleep(10)
+
+    def findSoup(self):
+        soup = BeautifulSoup(urllib.request.urlopen(self.URL), 'html.parser')
+        results = soup.find_all('div', attrs={'class': 'co-product'})
+        print('Number of results', len(results))
 
     def getElement(self):
         return self
@@ -119,7 +128,7 @@ class newsParsing(object):
         self.hostname = socket.gethostname()
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
-        self.shopeeParser = newsParserData(logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
-        self.shopeeParser.openLink()
+        self.newsparser = newsParserData(logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
+        self.newsparser.openLink()
         #self.shopeeParser.getElement()
         self.logger.info("Finish %s" % self.filename)
