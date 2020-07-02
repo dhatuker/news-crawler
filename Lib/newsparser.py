@@ -8,12 +8,8 @@ import configparser
 import os
 import socket
 import requests
-import urllib.request
+from urllib.request import Request, urlopen
 
-<<<<<<< HEAD
-
-=======
->>>>>>> d71a027c4349b9e78f41c311aaa8dff014187bcf
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
@@ -54,28 +50,25 @@ class newsParserData(object):
 
     def getRequest(self):
         web_r = requests.get(self.URL)
-        self.driver.get(self.URL)
+        #urlpage = urllib.request.urlopen(self.URL
+        req = Request(self.URL)
+        urlpage = urlopen(req).read()
+
+        #self.driver.get(self.URL)
         self.driver.implicitly_wait(40)
         time.sleep(10)
         #html = self.driver.execute_script("return document.documentElement.outerHTML")
-        sel_soup = BeautifulSoup(web_r.text, 'html.parser')
-        images = []
-        for i in sel_soup.findAll("img"):
-            print(i)
-            src = i["src"]
-            images.append(src)
+        sel_soup = BeautifulSoup(urlpage, 'html.parser')
+        #images = []
+        #for i in sel_soup.findAll("img"):
+         #   print(i)
+        #    src = i["src"]
+         #   images.append(src)
 
-        print(images)
-
-    def findSoup(self):
-        soup = BeautifulSoup(urllib.request.urlopen(self.URL), 'html.parser')
-        results = soup.find_all('div', attrs={'class': 'co-product'})
-        print('Number of results', len(results))
+        print(sel_soup)
 
     def getElement(self):
         return self
-
-
 
 
 class newsParsing(object):
