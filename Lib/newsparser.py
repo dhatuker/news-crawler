@@ -18,7 +18,6 @@ from MarketplaceHelper import ClickHelper
 
 class newsParserData(object):
     URL = "https://www.krjogja.com/berita-terkini/"
-    xcontainer = ""
     logger = None
     config = None
     driver = None
@@ -60,21 +59,42 @@ class newsParserData(object):
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
         newsLink = []
-        title = soup.find_all(lambda tag: tag.name == 'h4' and tag['class'] == ['post-list__title'])
+        newsTitle = []
+        link = soup.find_all(lambda tag: tag.name == 'h4' and tag['class'] == ['post-list__title'])
 
-        for i in title:
+
+        for i in link:
             news_link = i.find('a', attrs={'href': re.compile("^https://")})
             if news_link is not None:
                 newsLink.append(news_link.get('href'))
+                newsTitle.append(news_link.text)
         print(newsLink)
-        self.open_news_link(newsLink)
+        print(newsTitle)
+        self.openNewsLink(newsLink)
 
 
-    def open_news_link(self, newsLink):
+    def openNewsLink(self, newsLink):
+
         for link in newsLink:
             self.driver.get(link)
-            self.driver.implicitly_wait(15)
-            time.sleep(5)
+            self.driver.implicitly_wait(20)
+            #self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+            time.sleep(20)
+            self.findData()
+
+    def findData(self):
+        page_source = self.driver.page_source
+        soup = BeautifulSoup(page_source, 'lxml')
+        konten = soup.find('class', 'editor')
+        tanggal = soup.find('div', class_='post-date').text
+        editor = soup.find('div', class_='editor')
+        editor_name = editor.find('a', attrs={'href': re.compile("^https://")}).text
+        #comment = soup.find('span', class_=' _50f7')
+        #comment = './/div[@class=" _50f7"]'
+        #com = self.driver.find_elements_by_xpath(comment)
+        print(editor_name, tanggal)
+
+
 
 
 class newsParsing(object):
