@@ -15,10 +15,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
 from selenium.common.exceptions import NoSuchElementException
 
-
 class newsParserData(object):
     URL = "https://www.krjogja.com/berita-terkini/"
-    xcontainer = ""
     logger = None
     config = None
     driver = None
@@ -48,27 +46,52 @@ class newsParserData(object):
     def __del__(self):
         self.driver.quit()
 
-    def getRequest(self):
-        web_r = requests.get(self.URL)
-        #urlpage = urllib.request.urlopen(self.URL
-        req = Request(self.URL)
-        urlpage = urlopen(req).read()
+    def openLink(self):
+        self.driver.get(self.URL)
 
-        #self.driver.get(self.URL)
-        self.driver.implicitly_wait(40)
-        time.sleep(10)
-        #html = self.driver.execute_script("return document.documentElement.outerHTML")
-        sel_soup = BeautifulSoup(urlpage, 'html.parser')
-        #images = []
-        #for i in sel_soup.findAll("img"):
-         #   print(i)
-        #    src = i["src"]
-         #   images.append(src)
 
-        print(sel_soup)
 
     def getElement(self):
-        return self
+        self.openLink()
+        self.driver.implicitly_wait(40)
+        time.sleep(10)
+        page_source = self.driver.page_source
+        soup = BeautifulSoup(page_source, 'lxml')
+        newsLink = []
+        newsTitle = []
+        link = soup.find_all(lambda tag: tag.name == 'h4' and tag['class'] == ['post-list__title'])
+
+
+        for i in link:
+            news_link = i.find('a', attrs={'href': re.compile("^https://")})
+            if news_link is not None:
+                newsLink.append(news_link.get('href'))
+                newsTitle.append(news_link.text)
+        print(newsLink)
+        print(newsTitle)
+        self.openNewsLink(newsLink)
+
+
+    def openNewsLink(self, newsLink):
+
+        for link in newsLink:
+            self.driver.get(link)
+            self.driver.implicitly_wait(20)
+            #self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+            time.sleep(20)
+            self.findData()
+
+    def findData(self):
+        page_source = self.driver.page_source
+        soup = BeautifulSoup(page_source, 'lxml')
+        konten = soup.find('class', 'editor')
+        tanggal = soup.find('div', class_='post-date').text
+        editor = soup.find('div', class_='editor')
+        editor_name = editor.find('a', attrs={'href': re.compile("^https://")}).text
+        #comment = soup.find('span', class_=' _50f7')
+        #comment = './/div[@class=" _50f7"]'
+        #com = self.driver.find_elements_by_xpath(comment)
+        print(editor_name, tanggal)
 
 
 class newsParsing(object):
@@ -136,6 +159,5 @@ class newsParsing(object):
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
         self.newsParserData = newsParserData(logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
-        self.newsParserData.getRequest()
-        #self.shopeeParser.getElement()
+        self.newsParserData.getElement()
         self.logger.info("Finish %s" % self.filename)
