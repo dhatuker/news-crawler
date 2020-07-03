@@ -74,25 +74,43 @@ class newsParserData(object):
 
 
     def openNewsLink(self, newsLink):
-
         for link in newsLink:
             self.driver.get(link)
             self.driver.implicitly_wait(20)
             #self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
             time.sleep(20)
-            self.findData()
+            self.findData(link)
 
-    def findData(self):
+    def findData(self, link):
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
-        konten = soup.find('class', 'editor')
+
+        news_content = soup.find("div", {'class': 'content'})
+        page = soup.find("div", class_='pagination')
+        p = news_content.find_all('p')
+        content = ' '.join(item.text for item in p)
+        if page is not None:
+            paging_link = page.find_all(lambda tag: tag.name == 'a' and tag['class'] == ['post-page-numbers'])
+            for i in range(len(paging_link)-1):
+                link_ = link + str(i+2) + "/"
+                self.driver.get(link_)
+                self.driver.implicitly_wait(20)
+                time.sleep(20)
+                page_source = self.driver.page_source
+                soup = BeautifulSoup(page_source, 'lxml')
+                news_content = soup.find("div", {'class': 'content'})
+                page = soup.find("div", class_='pagination')
+                p = news_content.find_all('p')
+                content_ = ' '.join(item.text for item in p)
+                content = content + " " + content_
+
         tanggal = soup.find('div', class_='post-date').text
         editor = soup.find('div', class_='editor')
         editor_name = editor.find('a', attrs={'href': re.compile("^https://")}).text
         #comment = soup.find('span', class_=' _50f7')
         #comment = './/div[@class=" _50f7"]'
         #com = self.driver.find_elements_by_xpath(comment)
-        print(editor_name, tanggal)
+        print(content, editor_name, tanggal)
 
 
 
