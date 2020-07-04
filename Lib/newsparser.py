@@ -7,8 +7,9 @@ import argparse
 import configparser
 import os
 import socket
+import requests
+from urllib.request import Request, urlopen
 
-from requests_html import HTMLSession
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
@@ -110,8 +111,6 @@ class newsParserData(object):
         #comment = './/div[@class=" _50f7"]'
         #com = self.driver.find_elements_by_xpath(comment)
         print(content, editor_name, tanggal)
-
-
 
 
 class newsParsing(object):

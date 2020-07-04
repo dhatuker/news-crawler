@@ -1,0 +1,31 @@
+[2020-07-02 13:06:15.253837] INFO newsparser:121: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:06:15.254834] INFO newsparser:25: webdriver path: 
+[2020-07-02 13:06:28.563253] INFO newsparser:125: Finish newsparser
+[2020-07-02 13:27:02.016030] INFO newsparser:140: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:27:02.017026] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:27:19.819103] INFO newsparser:144: Finish newsparser
+[2020-07-02 13:28:47.858739] INFO newsparser:135: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:28:47.858739] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:29:03.792224] INFO newsparser:139: Finish newsparser
+[2020-07-02 13:31:47.572513] INFO newsparser:135: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:31:47.573496] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:32:04.852479] INFO newsparser:139: Finish newsparser
+[2020-07-02 13:35:59.275346] INFO newsparser:134: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:35:59.275346] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:36:21.254497] INFO newsparser:134: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:36:21.254497] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:37:31.995581] INFO newsparser:134: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:37:31.995581] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:37:47.137483] INFO newsparser:133: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:37:47.138481] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:38:02.552942] INFO newsparser:137: Finish newsparser
+[2020-07-02 13:54:10.226295] INFO newsparser:135: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:54:10.226295] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:56:48.763570] INFO newsparser:135: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:56:48.764568] INFO newsparser:29: webdriver path: 
+[2020-07-02 13:58:03.176465] INFO newsparser:135: Starting newsParsing on LAPTOP-DK
+[2020-07-02 13:58:03.176465] INFO newsparser:29: webdriver path: 
+[2020-07-02 14:00:56.144634] INFO newsparser:137: Starting newsParsing on LAPTOP-DK
+[2020-07-02 14:00:56.145633] INFO newsparser:29: webdriver path: 
+[2020-07-02 15:19:03.589801] INFO newsparser:137: Starting newsParsing on LAPTOP-DK
+[2020-07-02 15:19:03.589801] INFO newsparser:29: webdriver path: 
