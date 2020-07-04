@@ -42,7 +42,7 @@ class newsparserDatabaseHandler(object):
             db_version = rs[0].ver
         # except sqlalchemy.exc.OperationalError as error:
         #     self.logger.info('Error: connection not established {}'.format(error))
-        MarketplaceDatabaseHandler._instance = None
+        newsparserDatabaseHandler._instance = None
         # else:
         self.logger.debug('connection established: {}'.format(db_version))
 
@@ -59,9 +59,9 @@ class newsparserDatabaseHandler(object):
         else:
             raise Exception('cfg is not an instance of configparser')
 
-    def insert_news(self, news_id, title, content, tgl_terbit, view, share, editor):
-        sql = """REPLACE INTO content_table (news_id, title, content, tgl_terbit, total_view, total_share, editor)
-        VALUES (:news_id, :title, :content, :tgl_terbit, :view, :share, :editor)"""
-        rs = self._db.query(sql, news_id=news_id, title=title, content=content, tgl_terbit=tgl_terbit, view=view,
-                            share=share, editor=editor)
+    def insert_news(self, news_id, title, content, tgl_terbit, share, comment, editor, link):
+        sql = """REPLACE INTO content_table (news_id, title, content, tgl_terbit, total_comment, total_share, editor, link)
+        VALUES (:news_id, :title, :content, :tgl_terbit, :share, :comment, :editor, :link)"""
+        rs = self._db.query(sql, news_id=news_id, title=title, content=content, tgl_terbit=tgl_terbit,
+                            share=share, comment=comment, editor=editor, link=link)
         return rs
