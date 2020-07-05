@@ -18,7 +18,8 @@ from selenium.common.exceptions import NoSuchElementException
 
 
 class newsParserData(object):
-    URL = "https://www.krjogja.com/berita-terkini/"
+    #URL = "https://www.krjogja.com/berita-terkini/"
+    URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
@@ -52,7 +53,29 @@ class newsParserData(object):
     def openLink(self):
         self.driver.get(self.URL)
 
-    def getElement(self):
+    def scroll_down(self):
+        """A method for scrolling the page."""
+
+        # Get scroll height.
+        last_height = self.driver.execute_script("return document.body.scrollHeight")
+
+        while True:
+
+            # Wait to load the page.
+            time.sleep(5)
+
+            # Scroll down to the bottom.
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+            # Calculate new scroll height and compare with last scroll height.
+            new_height = self.driver.execute_script("return document.body.scrollHeight")
+
+            if new_height == last_height:
+                break
+
+            last_height = new_height
+
+    def getElementKR(self):
         self.openLink()
         self.driver.implicitly_wait(40)
         time.sleep(10)
@@ -66,16 +89,16 @@ class newsParserData(object):
             if news_link is not None:
                 newsLink.append(news_link.get('href'))
         print(newsLink)
-        self.openNewsLink(newsLink)
+        self.openNewsLinkKR(newsLink)
 
 
-    def openNewsLink(self, newsLink):
+    def openNewsLinkKR(self, newsLink):
         for link in newsLink:
             self.driver.get(link)
             self.driver.implicitly_wait(20)
             #self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
             time.sleep(20)
-            self.findData(link)
+            self.findDataTO(link)
 
     def convertMonth(self, month):
         months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -90,7 +113,7 @@ class newsParserData(object):
         year = output.group(3)
         return str(year)+"-"+str(month_)+"-"+str(date)
 
-    def findData(self, link):
+    def findDataKR(self, link):
         page_source = self.driver.page_source
 
         share = "-"
@@ -127,6 +150,38 @@ class newsParserData(object):
         #comment = './/div[@class=" _50f7"]'
         #com = self.driver.find_elements_by_xpath(comment)
         self.db.insert_news(news_id, title, content, tanggal_, share, comment, editor_name, link)
+
+    def getElementTO(self):
+        self.openLink()
+        self.driver.implicitly_wait(40)
+        self.scroll_down()
+        time.sleep(15)
+        page_source = self.driver.page_source
+        soup = BeautifulSoup(page_source, 'lxml')
+        newsLink = []
+
+        regex = re.compile('article-listing_.\sfeatured')
+
+        link = soup.find_all('div', class_=regex)
+
+        for i in link:
+            news_link = i.find('a', attrs={'href': re.compile("^/singapore/")})
+            if news_link is not None:
+                newsLink.append("https://www.todaysonline.com" + news_link.get('href'))
+        self.openNewsLinkTO(newsLink)
+
+    def openNewsLinkTO(self, newsLink):
+        for link in newsLink:
+            self.driver.get(link)
+            #r = requests.get(link)
+            self.driver.implicitly_wait(20)
+            #self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+            time.sleep(20)
+            #self.findDataTO(link)
+            #r.text
+
+    #def findDataTO(self, link):
+
 
 class newsParsing(object):
     config = None
@@ -195,5 +250,6 @@ class newsParsing(object):
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
         self.newsParserData = newsParserData(db=self.db, logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
-        self.newsParserData.getElement()
+        self.newsParserData.getElementTO()
+        #self.newsParserData.getElementKR()
         self.logger.info("Finish %s" % self.filename)
