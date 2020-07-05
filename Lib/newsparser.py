@@ -7,7 +7,6 @@ import argparse
 import configparser
 import os
 import socket
-import requests
 from urllib.request import Request, urlopen
 
 from bs4 import BeautifulSoup
@@ -47,11 +46,6 @@ class newsParserData(object):
     def __del__(self):
         self.driver.quit()
 
-    def openLink(self):
-        self.driver.get(self.URL)
-
-
-
     def getElement(self):
         self.openLink()
         self.driver.implicitly_wait(40)
@@ -62,7 +56,6 @@ class newsParserData(object):
         newsTitle = []
         link = soup.find_all(lambda tag: tag.name == 'h4' and tag['class'] == ['post-list__title'])
 
-
         for i in link:
             news_link = i.find('a', attrs={'href': re.compile("^https://")})
             if news_link is not None:
@@ -72,12 +65,11 @@ class newsParserData(object):
         print(newsTitle)
         self.openNewsLink(newsLink)
 
-
     def openNewsLink(self, newsLink):
         for link in newsLink:
             self.driver.get(link)
             self.driver.implicitly_wait(20)
-            #self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
+            # self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
             time.sleep(20)
             self.findData(link)
 
@@ -91,8 +83,8 @@ class newsParserData(object):
         content = ' '.join(item.text for item in p)
         if page is not None:
             paging_link = page.find_all(lambda tag: tag.name == 'a' and tag['class'] == ['post-page-numbers'])
-            for i in range(len(paging_link)-1):
-                link_ = link + str(i+2) + "/"
+            for i in range(len(paging_link) - 1):
+                link_ = link + str(i + 2) + "/"
                 self.driver.get(link_)
                 self.driver.implicitly_wait(20)
                 time.sleep(20)
@@ -107,9 +99,9 @@ class newsParserData(object):
         tanggal = soup.find('div', class_='post-date').text
         editor = soup.find('div', class_='editor')
         editor_name = editor.find('a', attrs={'href': re.compile("^https://")}).text
-        #comment = soup.find('span', class_=' _50f7')
-        #comment = './/div[@class=" _50f7"]'
-        #com = self.driver.find_elements_by_xpath(comment)
+        # comment = soup.find('span', class_=' _50f7')
+        # comment = './/div[@class=" _50f7"]'
+        # com = self.driver.find_elements_by_xpath(comment)
         print(content, editor_name, tanggal)
 
 
@@ -171,12 +163,12 @@ class newsParsing(object):
                                                           format_string=format_string)
             self.logger.handlers.append(loghandler)
 
-
     def run(self):
         self.init()
         self.hostname = socket.gethostname()
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
-        self.newsParserData = newsParserData(logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
+        self.newsParserData = newsParserData(logger=self.logger,
+                                             path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
         self.newsParserData.getElement()
         self.logger.info("Finish %s" % self.filename)
