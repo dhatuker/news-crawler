@@ -13,6 +13,7 @@ from db.newsparserDatabaseHandler import newsparserDatabaseHandler
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
+from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 
 
@@ -53,26 +54,16 @@ class newsParserData(object):
         self.driver.get(self.URL)
 
     def scroll_down(self):
-        """A method for scrolling the page."""
+        SCROLL_PAUSE_TIME = 1
 
-        # Get scroll height.
-        last_height = self.driver.execute_script("return document.body.scrollHeight")
+        for i in range(3):
+            # Scroll down to bottom     
+            self.driver.execute_script("window.scrollTo(0, 2000);")
 
-        while True:
+            # Wait to load page
+            time.sleep(SCROLL_PAUSE_TIME)
 
-            # Wait to load the page.
-            time.sleep(5)
-
-            # Scroll down to the bottom.
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-            # Calculate new scroll height and compare with last scroll height.
-            new_height = self.driver.execute_script("return document.body.scrollHeight")
-
-            if new_height == last_height:
-                break
-
-            last_height = new_height
+#KRJOGJA
 
     def getElementKR(self):
         self.openLink()
@@ -97,7 +88,7 @@ class newsParserData(object):
             self.driver.implicitly_wait(20)
             # self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
             time.sleep(20)
-            self.findDataTO(link)
+            self.findDataKR(link)
 
     def convertMonth(self, month, news_id):
         month = month.lower()
@@ -121,12 +112,16 @@ class newsParserData(object):
         page_source = self.driver.page_source
 
         share = "-"
-        comment = "-"
+        #comment = "-"
 
         soup = BeautifulSoup(page_source, 'lxml')
         news_content = soup.find("div", {'class': 'content'})
         page = soup.find("div", class_='pagination')
         p = news_content.find_all('p')
+
+        self.scroll_down()
+        comment = soup.find('span', class_=' _50f7')
+
         content = ' '.join(item.text for item in p)
         if page is not None:
             paging_link = page.find_all(lambda tag: tag.name == 'a' and tag['class'] == ['post-page-numbers'])
@@ -142,7 +137,6 @@ class newsParserData(object):
                 p = news_content.find_all('p')
                 content_ = ' '.join(item.text for item in p)
                 content = content + " " + content_
-
         title = soup.find('h1', class_='single-header__title').text
         if "krjogja" in link :
             news_id=1
@@ -150,10 +144,12 @@ class newsParserData(object):
         tanggal_ = self.toDate(tanggal, news_id)
         editor = soup.find('div', class_='editor')
         editor_name = editor.find('a', attrs={'href': re.compile("^https://")}).text
-        #comment = soup.find('span', class_=' _50f7')
         #comment = './/div[@class=" _50f7"]'
         #com = self.driver.find_elements_by_xpath(comment)
-        self.db.insert_news(news_id, title, content, tanggal_, share, comment, editor_name, link)
+        print(title, comment)
+        #self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, link)
+
+#TODAYONLINE
 
     def getElementTO(self):
         self.openLink()
@@ -212,8 +208,8 @@ class newsParserData(object):
         editor = soup.find('span', class_='today-author')
         editor_name = editor.find('a', attrs={'href': re.compile("^mailto:")}).text
 
-        print(news_id, link,  title, editor_name, tanggal_, share, "\n", content)
-        #self.db.insert_news(news_id, title, content, tanggal_, share, comment, editor_name, link)
+        #print(news_id, link,  title, editor_name, tanggal_, share, "\n", content)
+        self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, link)
 
 
 class newsParsing(object):
