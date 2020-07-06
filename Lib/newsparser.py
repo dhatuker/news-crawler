@@ -52,9 +52,12 @@ class newsParserData(object):
 
     def openLink(self):
         self.driver.get(self.URL)
+        self.driver.implicitly_wait(30)
+        time.sleep(10)
+
 
     def scroll_down(self):
-        SCROLL_PAUSE_TIME = 1
+        SCROLL_PAUSE_TIME = 5
 
         for i in range(3):
             # Scroll down to bottom     
@@ -63,41 +66,14 @@ class newsParserData(object):
             # Wait to load page
             time.sleep(SCROLL_PAUSE_TIME)
 
-#KRJOGJA
-
-    def getElementKR(self):
-        self.openLink()
-        self.driver.implicitly_wait(40)
-        time.sleep(10)
-        page_source = self.driver.page_source
-        soup = BeautifulSoup(page_source, 'lxml')
-        newsLink = []
-        link = soup.find_all(lambda tag: tag.name == 'h4' and tag['class'] == ['post-list__title'])
-
-        for i in link:
-            news_link = i.find('a', attrs={'href': re.compile("^https://")})
-            if news_link is not None:
-                newsLink.append(news_link.get('href'))
-        print(newsLink)
-        self.openNewsLinkKR(newsLink)
-
-
-    def openNewsLinkKR(self, newsLink):
-        for link in newsLink:
-            self.driver.get(link)
-            self.driver.implicitly_wait(20)
-            # self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-            time.sleep(20)
-            self.findDataKR(link)
-
     def convertMonth(self, month, news_id):
         month = month.lower()
         months = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember']
-        months2 = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+        months_en = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
         if news_id == 1:
             return months.index(month) + 1
         elif news_id == 2:
-            return months2.index(month) + 1
+            return months_en.index(month) + 1
 
     def toDate(self, input, news_id):
         re_date = r"(\d{1,2}) ([A-Za-z]+).? (\d{4})"
@@ -108,108 +84,118 @@ class newsParserData(object):
         year = output.group(3)
         return str(year)+"-"+str(month_)+"-"+str(date)
 
-    def findDataKR(self, link):
+    def getElementKR(self):
+        self.openLink()
         page_source = self.driver.page_source
+        soup = BeautifulSoup(page_source, 'lxml')
+
+        if 'krjogja' in self.URL:
+            news_id = 1
+            link = soup.find_all(lambda tag: tag.name == 'h4' and tag['class'] == ['post-list__title'])
+
+            for i in link:
+                news_link = i.find('a', attrs={'href': re.compile("^https://")})
+                if news_link is not None:
+                    url = news_link.get('href')
+                    soup = self.openNewsLink(url)
+                    self.findDataKR(url, soup, news_id)
+
+        elif 'todayonline' in self.URL:
+            news_id = 2
+
+            self.scroll_down()
+            time.sleep(5)
+
+            regex = re.compile('article-listing_.\sfeatured')
+
+            link = soup.find_all('div', class_=regex)
+
+            for i in link:
+                news_link = i.find('a', attrs={'href': re.compile("^/singapore/")})
+                if news_link is not None:
+                    url = "https://www.todayonline.com" + news_link.get('href')
+                    soup = self.openNewsLink(url)
+                    self.findDataTO(url, soup, news_id)
+
+    def openNewsLink(self, url):
+        self.driver.get(url)
+        self.driver.implicitly_wait(20)
+        time.sleep(10)
+        page_source = self.driver.page_source
+        soup = BeautifulSoup(page_source, 'lxml')
+        return soup
+
+
+    def findDataKR(self, url, soup, news_id):
+        self.logger.info("news_id : {}".format(news_id))
+
+        title = soup.find('h1', class_='single-header__title').text
+        self.logger.info("title : {}".format(title))
+
+        tanggal = soup.find('div', class_='post-date').text
+        tanggal_ = self.toDate(tanggal, news_id)
+        self.logger.info("tanggal : {}".format(tanggal_))
+
+        editor = soup.find('div', class_='editor')
+        editor_name = editor.find('a', attrs={'href': re.compile("^https://")}).text
+        self.logger.info("editor : {}".format(editor_name))
 
         share = "-"
-        #comment = "-"
+        self.logger.info("share : {}".format(share))
 
-        soup = BeautifulSoup(page_source, 'lxml')
-        news_content = soup.find("div", {'class': 'content'})
-        page = soup.find("div", class_='pagination')
+        news_content = soup.find('div', class_='content')
         p = news_content.find_all('p')
+        content = ' '.join(item.text for item in p)
 
         self.scroll_down()
-        comment = soup.find('span', class_=' _50f7')
 
-        content = ' '.join(item.text for item in p)
+        comment = soup.find('span', class_=' _50f7')
+        self.logger.info("comment : {}".format(comment))
+
+        page = soup.find("div", class_='pagination')
         if page is not None:
             paging_link = page.find_all(lambda tag: tag.name == 'a' and tag['class'] == ['post-page-numbers'])
             for i in range(len(paging_link) - 1):
-                link_ = link + str(i + 2) + "/"
-                self.driver.get(link_)
-                self.driver.implicitly_wait(20)
-                time.sleep(20)
-                page_source = self.driver.page_source
-                soup = BeautifulSoup(page_source, 'lxml')
-                news_content = soup.find("div", {'class': 'content'})
-                page = soup.find("div", class_='pagination')
+                link_ = url + str(i + 2) + "/"
+                soup_ = self.openNewsLink(link_)
+                news_content = soup_.find("div", class_='content')
                 p = news_content.find_all('p')
                 content_ = ' '.join(item.text for item in p)
                 content = content + " " + content_
-        title = soup.find('h1', class_='single-header__title').text
-        if "krjogja" in link :
-            news_id=1
-        tanggal = soup.find('div', class_='post-date').text
-        tanggal_ = self.toDate(tanggal, news_id)
-        editor = soup.find('div', class_='editor')
-        editor_name = editor.find('a', attrs={'href': re.compile("^https://")}).text
-        #comment = './/div[@class=" _50f7"]'
-        #com = self.driver.find_elements_by_xpath(comment)
-        print(title, comment)
-        #self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, link)
+        self.logger.info("content : {}".format(content))
 
-#TODAYONLINE
-
-    def getElementTO(self):
-        self.openLink()
-        self.driver.implicitly_wait(40)
-        self.scroll_down()
-        time.sleep(15)
-        page_source = self.driver.page_source
-        soup = BeautifulSoup(page_source, 'lxml')
-        newsLink = []
-
-        regex = re.compile('article-listing_.\sfeatured')
-
-        link = soup.find_all('div', class_=regex)
-
-        for i in link:
-            news_link = i.find('a', attrs={'href': re.compile("^/singapore/")})
-            if news_link is not None:
-                newsLink.append("https://www.todayonline.com" + news_link.get('href'))
-        self.openNewsLinkTO(newsLink)
-
-    def openNewsLinkTO(self, newsLink):
-        for link in newsLink:
-            self.driver.get(link)
-            #r = requests.get(link)
-            #soup = BeautifulSoup(r.text, 'lxml')
-            self.driver.implicitly_wait(40)
-            #self.driver.execute_script("window.scrollTo(0,document.body.scrollHeight)")
-            time.sleep(15)
-            #print(soup)
-            self.findDataTO(link)
-            #r.text
-
-    #def findDataTO(self, link):
-
-    def findDataTO(self, link):
-        page_source = self.driver.page_source
+        self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, url)
 
 
-        comment = "-"
-
-        soup = BeautifulSoup(page_source, 'lxml')
-        news_content = soup.find("div", {'class': 'article-detail_body'})
-        p = news_content.find_all('p')
-        content = ' '.join(item.text for item in p)
+    def findDataTO(self, url, soup, news_id):
+        self.logger.info("news_id : {}".format(news_id))
 
         title = soup.find('h1', class_='article-detail_title').text
+        self.logger.info("title : {}".format(title))
 
-        if "todayonline" in link :
-            news_id=2
+        editor = soup.find('span', class_='today-author')
+        if editor is not None:
+            editor_name = editor.text
+        else:
+            editor_name = "-"
+        self.logger.info("editor : {}".format(editor_name))
 
         tanggal = soup.find('div', class_='article-detail_bylinepublish').text
         tanggal_ = self.toDate(tanggal, news_id)
+        self.logger.info("tanggal : {}".format(tanggal_))
+
+        news_content = soup.find("div", class_='article-detail_body')
+        p = news_content.find_all('p')
+        content = ' '.join(item.text for item in p)
+        self.logger.info("content : {}".format(content))
 
         share = soup.find('p', class_='share-count-common share-count').text
+        self.logger.info("share : {}".format(share))
 
-        editor = soup.find('span', class_='today-author')
-        editor_name = editor.find('a', attrs={'href': re.compile("^mailto:")}).text
+        comment = "-"
+        self.logger.info("comment : {}".format(comment))
 
-        #print(news_id, link,  title, editor_name, tanggal_, share, "\n", content)
-        self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, link)
+        self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, url)
 
 
 class newsParsing(object):
@@ -218,7 +204,6 @@ class newsParsing(object):
     filename = ""
     iphelper = None
     db = None
-    solrAccountHandler = None
     hostname = ''
     hostip = ''
     shopeeParser = None
@@ -249,12 +234,8 @@ class newsParsing(object):
         self.config.read(config_file)
 
         # init logger
-        # init logger
         logbook.set_datetime_format("local")
         self.logger = logbook.Logger(name=self.filename)
-        # format_string = '%s %s' % ('[{record.time:%Y-%m-%d %H:%M:%S.%f%z}]',
-        #                               # '{record.level_name} on {record.filename}:{record.lineno}:',
-        #                               '{record.channel}:{record.lineno}: {record.message}')
         format_string = '%s %s' % ('[{record.time:%Y-%m-%d %H:%M:%S.%f%z}] {record.level_name}',
                                    '{record.channel}:{record.lineno}: {record.message}')
         if self.config.has_option('handler_stream_handler', 'verbose'):
@@ -278,6 +259,6 @@ class newsParsing(object):
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
         self.newsParserData = newsParserData(db=self.db, logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
-        self.newsParserData.getElementTO()
-        #self.newsParserData.getElementKR()
+        #self.newsParserData.getElementTO()
+        self.newsParserData.getElementKR()
         self.logger.info("Finish %s" % self.filename)
