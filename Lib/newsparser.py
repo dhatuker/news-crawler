@@ -13,13 +13,12 @@ from db.newsparserDatabaseHandler import newsparserDatabaseHandler
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
-from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 
 
 class newsParserData(object):
-    #URL = "https://www.krjogja.com/berita-terkini/"
-    URL = "https://www.todayonline.com/singapore"
+    URL = "https://www.krjogja.com/berita-terkini/"
+    # URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
@@ -55,9 +54,8 @@ class newsParserData(object):
         self.driver.implicitly_wait(30)
         time.sleep(10)
 
-
     def scroll_down(self):
-        SCROLL_PAUSE_TIME = 5
+        SCROLL_PAUSE_TIME = 10
 
         for i in range(3):
             # Scroll down to bottom     
@@ -68,8 +66,10 @@ class newsParserData(object):
 
     def convertMonth(self, month, news_id):
         month = month.lower()
-        months = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember']
-        months_en = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+        months = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober',
+                  'november', 'desember']
+        months_en = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october',
+                     'november', 'december']
         if news_id == 1:
             return months.index(month) + 1
         elif news_id == 2:
@@ -82,9 +82,9 @@ class newsParserData(object):
         month = output.group(2)
         month_ = self.convertMonth(month, news_id)
         year = output.group(3)
-        return str(year)+"-"+str(month_)+"-"+str(date)
+        return str(year) + "-" + str(month_) + "-" + str(date)
 
-    def getElementKR(self):
+    def getElement(self):
         self.openLink()
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
@@ -119,12 +119,12 @@ class newsParserData(object):
 
     def openNewsLink(self, url):
         self.driver.get(url)
-        self.driver.implicitly_wait(20)
-        time.sleep(10)
+        self.driver.implicitly_wait(10)
+        time.sleep(5)
+        self.scroll_down()
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
         return soup
-
 
     def findDataKR(self, url, soup, news_id):
         self.logger.info("news_id : {}".format(news_id))
@@ -147,10 +147,17 @@ class newsParserData(object):
         p = news_content.find_all('p')
         content = ' '.join(item.text for item in p)
 
-        self.scroll_down()
-
-        comment = soup.find('span', class_=' _50f7')
-        self.logger.info("comment : {}".format(comment))
+        iframe = self.driver.find_elements_by_xpath('.//iframe[@class="i-amphtml-fill-content"]')
+        self.driver.switch_to.default_content()
+        self.driver.switch_to.frame(iframe[5])
+        iframe = self.driver.find_element_by_xpath('.//iframe[1]')
+        self.driver.switch_to.frame(iframe)
+        comment = self.driver.find_element_by_xpath('.//span[@class=" _50f7"]')
+        if comment is not None:
+            comment_ = comment.text
+        else:
+            comment_ = "-"
+        self.logger.info("comment : {}".format(comment_))
 
         page = soup.find("div", class_='pagination')
         if page is not None:
@@ -164,8 +171,7 @@ class newsParserData(object):
                 content = content + " " + content_
         self.logger.info("content : {}".format(content))
 
-        self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, url)
-
+        self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
     def findDataTO(self, url, soup, news_id):
         self.logger.info("news_id : {}".format(news_id))
@@ -258,7 +264,7 @@ class newsParsing(object):
         self.hostname = socket.gethostname()
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
-        self.newsParserData = newsParserData(db=self.db, logger=self.logger, path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
-        #self.newsParserData.getElementTO()
-        self.newsParserData.getElementKR()
+        self.newsParserData = newsParserData(db=self.db, logger=self.logger,
+                                             path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
+        self.newsParserData.getElement()
         self.logger.info("Finish %s" % self.filename)
