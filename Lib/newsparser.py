@@ -18,15 +18,17 @@ from selenium.common.exceptions import NoSuchElementException
 
 class newsParserData(object):
     URL = "https://www.krjogja.com/berita-terkini/"
-    # URL = "https://www.todayonline.com/singapore"
+    #URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
     cookies = None
 
-    def __init__(self, db, path_to_webdriver, logger=None, cookies=None):
+    def __init__(self, db, path_to_webdriver, config=None, logger=None, cookies=None):
         self.logger = logger
         self.logger.info("webdriver path: ".format(path_to_webdriver))
+
+        self.config = config
 
         chrome_options = ChromeOption()
 
@@ -51,8 +53,10 @@ class newsParserData(object):
 
     def openLink(self):
         self.driver.get(self.URL)
-        self.driver.implicitly_wait(30)
+        self.driver.implicitly_wait(20)
         time.sleep(10)
+        if "todayonline" in self.URL:
+            self.scroll_down()
 
     def scroll_down(self):
         SCROLL_PAUSE_TIME = 10
@@ -121,7 +125,11 @@ class newsParserData(object):
         self.driver.get(url)
         self.driver.implicitly_wait(10)
         time.sleep(5)
-        self.scroll_down()
+        if 'krjogja' in url:
+            re_krjogja = r"[\/][0-9][\/]"
+            x = re.findall(re_krjogja, url)
+            if len(x) == 0:
+                self.scroll_down()
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
         return soup
@@ -129,15 +137,18 @@ class newsParserData(object):
     def findDataKR(self, url, soup, news_id):
         self.logger.info("news_id : {}".format(news_id))
 
-        title = soup.find('h1', class_='single-header__title').text
+        title = soup.find(self.config.get('krjogja', 'kr_title_tag'),
+                          class_ = self.config.get('krjogja', 'kr_title_class')).text
         self.logger.info("title : {}".format(title))
 
-        tanggal = soup.find('div', class_='post-date').text
+        tanggal = soup.find(self.config.get('krjogja', 'kr_date_tag'),
+                            class_ = self.config.get('krjogja', 'kr_date_class')).text
+
         tanggal_ = self.toDate(tanggal, news_id)
         self.logger.info("tanggal : {}".format(tanggal_))
 
         editor = soup.find('div', class_='editor')
-        editor_name = editor.find('a', attrs={'href': re.compile("^https://")}).text
+        editor_name = editor.find('a').text
         self.logger.info("editor : {}".format(editor_name))
 
         share = "-"
@@ -169,39 +180,54 @@ class newsParserData(object):
                 p = news_content.find_all('p')
                 content_ = ' '.join(item.text for item in p)
                 content = content + " " + content_
+
         self.logger.info("content : {}".format(content))
 
-        self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
+        #self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
     def findDataTO(self, url, soup, news_id):
         self.logger.info("news_id : {}".format(news_id))
 
-        title = soup.find('h1', class_='article-detail_title').text
+        #title
+        title = soup.find(self.config.get('todayonline', 'title_tag'),
+                          class_= self.config.get('todayonline', 'title_class')).text
+
         self.logger.info("title : {}".format(title))
 
-        editor = soup.find('span', class_='today-author')
+        #editor
+        editor = soup.find(self.config.get('todayonline', 'editor_tag'),
+                          class_= self.config.get('todayonline', 'editor_class'))
         if editor is not None:
             editor_name = editor.text
         else:
             editor_name = "-"
         self.logger.info("editor : {}".format(editor_name))
 
-        tanggal = soup.find('div', class_='article-detail_bylinepublish').text
+        #tanggal
+        tanggal = soup.find(self.config.get('todayonline', 'date_tag'),
+                          class_= self.config.get('todayonline', 'date_class')).text
+
         tanggal_ = self.toDate(tanggal, news_id)
         self.logger.info("tanggal : {}".format(tanggal_))
 
-        news_content = soup.find("div", class_='article-detail_body')
+        #content
+        news_content = soup.find(self.config.get('todayonline', 'newscontent_tag'),
+                          class_= self.config.get('todayonline', 'newscontent_class'))
+
         p = news_content.find_all('p')
         content = ' '.join(item.text for item in p)
         self.logger.info("content : {}".format(content))
 
-        share = soup.find('p', class_='share-count-common share-count').text
+        #share
+        share = soup.find(self.config.get('todayonline', 'share_tag'),
+                          class_= self.config.get('todayonline', 'share_class')).text
         self.logger.info("share : {}".format(share))
 
+        #comment
         comment = "-"
         self.logger.info("comment : {}".format(comment))
 
-        self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, url)
+        #self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, url)
 
 
 class newsParsing(object):
@@ -260,11 +286,13 @@ class newsParsing(object):
         self.db = newsparserDatabaseHandler.instantiate_from_configparser(self.config, self.logger)
 
     def run(self):
+        start_time = time.time()
         self.init()
         self.hostname = socket.gethostname()
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
-        self.newsParserData = newsParserData(db=self.db, logger=self.logger,
-                                             path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'))
+        self.newsParserData = newsParserData(db=self.db,
+                                             path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'), config=self.config, logger=self.logger)
         self.newsParserData.getElement()
         self.logger.info("Finish %s" % self.filename)
+        print("--- %s seconds ---" % (time.time() - start_time))
