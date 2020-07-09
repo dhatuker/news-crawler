@@ -1,4 +1,3 @@
-import requests
 import logbook
 import time
 import re
@@ -7,18 +6,15 @@ import argparse
 import configparser
 import os
 import socket
-from urllib.request import Request, urlopen
-from db.newsparserDatabaseHandler import newsparserDatabaseHandler
 
+from db.newsparserDatabaseHandler import newsparserDatabaseHandler
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
-from selenium.common.exceptions import NoSuchElementException
-
 
 class newsParserData(object):
-    URL = "https://www.krjogja.com/berita-terkini/"
-    #URL = "https://www.todayonline.com/singapore"
+    #URL = "https://www.krjogja.com/berita-terkini/"
+    URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
@@ -55,8 +51,10 @@ class newsParserData(object):
         self.driver.get(self.URL)
         self.driver.implicitly_wait(20)
         time.sleep(10)
-        if "todayonline" in self.URL:
-            self.scroll_down()
+        self.scroll_down()
+        page_source = self.driver.page_source
+        soup = BeautifulSoup(page_source, 'lxml')
+        return soup
 
     def scroll_down(self):
         SCROLL_PAUSE_TIME = 10
@@ -89,88 +87,103 @@ class newsParserData(object):
         return str(year) + "-" + str(month_) + "-" + str(date)
 
     def getElement(self):
-        self.openLink()
-        page_source = self.driver.page_source
-        soup = BeautifulSoup(page_source, 'lxml')
+        soup = self.openLink()
 
         if 'krjogja' in self.URL:
             news_id = 1
+            web = 'krjogja'
             link = soup.find_all(lambda tag: tag.name == 'h4' and tag['class'] == ['post-list__title'])
-
-            for i in link:
-                news_link = i.find('a', attrs={'href': re.compile("^https://")})
-                if news_link is not None:
-                    url = news_link.get('href')
-                    soup = self.openNewsLink(url)
-                    self.findDataKR(url, soup, news_id)
 
         elif 'todayonline' in self.URL:
             news_id = 2
-
+            web = 'todayonline'
             self.scroll_down()
             time.sleep(5)
 
             regex = re.compile('article-listing_.\sfeatured')
-
             link = soup.find_all('div', class_=regex)
 
-            for i in link:
-                news_link = i.find('a', attrs={'href': re.compile("^/singapore/")})
-                if news_link is not None:
+        for i in link:
+            news_link = i.find('a', attrs={'href': re.compile(self.config.get(web, 'recompile'))})
+            if news_link is not None:
+                if news_id == 1 :
+                    url = news_link.get('href')
+                elif news_id == 2:
                     url = "https://www.todayonline.com" + news_link.get('href')
-                    soup = self.openNewsLink(url)
-                    self.findDataTO(url, soup, news_id)
+                soup = self.openNewsLink(url)
+                self.findData(url, soup, news_id, web)
 
     def openNewsLink(self, url):
         self.driver.get(url)
         self.driver.implicitly_wait(10)
         time.sleep(5)
-        if 'krjogja' in url:
-            re_krjogja = r"[\/][0-9][\/]"
-            x = re.findall(re_krjogja, url)
-            if len(x) == 0:
-                self.scroll_down()
+        self.scroll_down()
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
         return soup
 
-    def findDataKR(self, url, soup, news_id):
+    def findData(self, url, soup, news_id, web):
         self.logger.info("news_id : {}".format(news_id))
 
-        title = soup.find(self.config.get('krjogja', 'kr_title_tag'),
-                          class_ = self.config.get('krjogja', 'kr_title_class')).text
+        #title
+        title = soup.find(self.config.get(web, 'title_tag'),
+                          class_= self.config.get(web, 'title_class')).text
+
         self.logger.info("title : {}".format(title))
 
-        tanggal = soup.find(self.config.get('krjogja', 'kr_date_tag'),
-                            class_ = self.config.get('krjogja', 'kr_date_class')).text
+        #editor
+        editor = soup.find(self.config.get(web, 'editor_tag'),
+                          class_= self.config.get(web, 'editor_class'))
+        if editor is not None:
+            editor_name = editor.text
+        else:
+            editor_name = "-"
+        self.logger.info("editor : {}".format(editor_name))
+
+        #tanggal
+        tanggal = soup.find(self.config.get(web, 'date_tag'),
+                          class_= self.config.get(web, 'date_class')).text
 
         tanggal_ = self.toDate(tanggal, news_id)
         self.logger.info("tanggal : {}".format(tanggal_))
 
-        editor = soup.find('div', class_='editor')
-        editor_name = editor.find('a').text
-        self.logger.info("editor : {}".format(editor_name))
+        #share
+        if self.config.get(web, 'share_tag') is not None :
+            share = soup.find(self.config.get(web, 'share_tag'),
+                              class_= self.config.get(web, 'share_class')).text
+        else :
+            share = "-"
 
-        share = "-"
         self.logger.info("share : {}".format(share))
 
-        news_content = soup.find('div', class_='content')
+        #content
+        news_content = soup.find(self.config.get(web, 'newscontent_tag'),
+                          class_= self.config.get(web, 'newscontent_class'))
+
         p = news_content.find_all('p')
         content = ' '.join(item.text for item in p)
 
-        iframe = self.driver.find_elements_by_xpath('.//iframe[@class="i-amphtml-fill-content"]')
-        self.driver.switch_to.default_content()
-        self.driver.switch_to.frame(iframe[5])
-        iframe = self.driver.find_element_by_xpath('.//iframe[1]')
-        self.driver.switch_to.frame(iframe)
-        comment = self.driver.find_element_by_xpath('.//span[@class=" _50f7"]')
-        if comment is not None:
-            comment_ = comment.text
+
+        # comment
+        if self.config.get(web, 'iframefb') is not None:
+            iframe = self.driver.find_elements_by_xpath('.//iframe[@class="i-amphtml-fill-content"]')
+            self.driver.switch_to.default_content()
+            self.driver.switch_to.frame(iframe[5])
+            iframe = self.driver.find_element_by_xpath('.//iframe[1]')
+            self.driver.switch_to.frame(iframe)
+            comment = self.driver.find_element_by_xpath('.//span[@class=" _50f7"]')
+
+            if comment is not None:
+                comment_ = comment.text
+            else:
+                comment_ = "-"
         else:
             comment_ = "-"
         self.logger.info("comment : {}".format(comment_))
 
-        page = soup.find("div", class_='pagination')
+        # page
+        page = soup.find(self.config.get(web, 'page_tag'),
+                         class_=self.config.get(web, 'page_class'))
         if page is not None:
             paging_link = page.find_all(lambda tag: tag.name == 'a' and tag['class'] == ['post-page-numbers'])
             for i in range(len(paging_link) - 1):
@@ -182,50 +195,6 @@ class newsParserData(object):
                 content = content + " " + content_
 
         self.logger.info("content : {}".format(content))
-
-        #self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
-
-    def findDataTO(self, url, soup, news_id):
-        self.logger.info("news_id : {}".format(news_id))
-
-        #title
-        title = soup.find(self.config.get('todayonline', 'title_tag'),
-                          class_= self.config.get('todayonline', 'title_class')).text
-
-        self.logger.info("title : {}".format(title))
-
-        #editor
-        editor = soup.find(self.config.get('todayonline', 'editor_tag'),
-                          class_= self.config.get('todayonline', 'editor_class'))
-        if editor is not None:
-            editor_name = editor.text
-        else:
-            editor_name = "-"
-        self.logger.info("editor : {}".format(editor_name))
-
-        #tanggal
-        tanggal = soup.find(self.config.get('todayonline', 'date_tag'),
-                          class_= self.config.get('todayonline', 'date_class')).text
-
-        tanggal_ = self.toDate(tanggal, news_id)
-        self.logger.info("tanggal : {}".format(tanggal_))
-
-        #content
-        news_content = soup.find(self.config.get('todayonline', 'newscontent_tag'),
-                          class_= self.config.get('todayonline', 'newscontent_class'))
-
-        p = news_content.find_all('p')
-        content = ' '.join(item.text for item in p)
-        self.logger.info("content : {}".format(content))
-
-        #share
-        share = soup.find(self.config.get('todayonline', 'share_tag'),
-                          class_= self.config.get('todayonline', 'share_class')).text
-        self.logger.info("share : {}".format(share))
-
-        #comment
-        comment = "-"
-        self.logger.info("comment : {}".format(comment))
 
         #self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, url)
 
@@ -262,7 +231,7 @@ class newsParsing(object):
             log_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../logs', '%s.log' % self.filename)
 
         # load config
-        self.config = configparser.ConfigParser(strict=False)
+        self.config = configparser.ConfigParser(strict=False, allow_no_value=True)
         self.config.read(config_file)
 
         # init logger
