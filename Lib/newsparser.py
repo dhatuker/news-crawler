@@ -13,8 +13,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
 
 class newsParserData(object):
-    #URL = "https://www.krjogja.com/berita-terkini/"
-    URL = "https://www.todayonline.com/singapore"
+    URL = "https://www.krjogja.com/berita-terkini/"
+    #URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
@@ -49,15 +49,15 @@ class newsParserData(object):
 
     def openLink(self):
         self.driver.get(self.URL)
-        self.driver.implicitly_wait(20)
-        time.sleep(10)
+        self.driver.implicitly_wait(15)
+        time.sleep(5)
         self.scroll_down()
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
         return soup
 
     def scroll_down(self):
-        SCROLL_PAUSE_TIME = 10
+        SCROLL_PAUSE_TIME = 5
 
         for i in range(3):
             # Scroll down to bottom     
@@ -115,8 +115,8 @@ class newsParserData(object):
 
     def openNewsLink(self, url):
         self.driver.get(url)
-        self.driver.implicitly_wait(10)
-        time.sleep(5)
+        self.driver.implicitly_wait(5)
+        time.sleep(3)
         self.scroll_down()
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
@@ -126,59 +126,78 @@ class newsParserData(object):
         self.logger.info("news_id : {}".format(news_id))
 
         #title
-        title = soup.find(self.config.get(web, 'title_tag'),
-                          class_= self.config.get(web, 'title_class')).text
+        try:
+            title = soup.find(self.config.get(web, 'title_tag'),
+                              class_= self.config.get(web, 'title_class')).text
+        except :
+            title = "Title tidak Ditemukan"
 
         self.logger.info("title : {}".format(title))
 
         #editor
-        editor = soup.find(self.config.get(web, 'editor_tag'),
-                          class_= self.config.get(web, 'editor_class'))
-        if editor is not None:
-            editor_name = editor.text
-        else:
-            editor_name = "-"
+        try:
+            editor = soup.find(self.config.get(web, 'editor_tag'),
+                               class_= self.config.get(web, 'editor_class'))
+            if editor is not None:
+                editor_name = editor.text
+            else:
+                editor_name = "-"
+        except:
+            editor_name = "Nama Editor tidak Ditemukan"
+
         self.logger.info("editor : {}".format(editor_name))
 
         #tanggal
-        tanggal = soup.find(self.config.get(web, 'date_tag'),
-                          class_= self.config.get(web, 'date_class')).text
+        try:
+            tanggal = soup.find(self.config.get(web, 'date_tag'),
+                                class_= self.config.get(web, 'date_class')).text
+            tanggal_ = self.toDate(tanggal, news_id)
+        except :
+            tanggal_ = "Tanggal tidak Ditemukan"
 
-        tanggal_ = self.toDate(tanggal, news_id)
         self.logger.info("tanggal : {}".format(tanggal_))
 
         #share
-        if self.config.get(web, 'share_tag') is not None :
-            share = soup.find(self.config.get(web, 'share_tag'),
-                              class_= self.config.get(web, 'share_class')).text
-        else :
-            share = "-"
+        try:
+            if self.config.get(web, 'share_tag') is not None :
+                share = soup.find(self.config.get(web, 'share_tag'),
+                                  class_= self.config.get(web, 'share_class')).text
+            else :
+                share = "-"
+        except:
+            share = "Share tidak Ditemukan"
 
         self.logger.info("share : {}".format(share))
 
         #content
-        news_content = soup.find(self.config.get(web, 'newscontent_tag'),
-                          class_= self.config.get(web, 'newscontent_class'))
-
-        p = news_content.find_all('p')
-        content = ' '.join(item.text for item in p)
+        try :
+            news_content = soup.find(self.config.get(web, 'newscontent_tag'),
+                                     class_= self.config.get(web, 'newscontent_class'))
+            p = news_content.find_all('p')
+            content = ' '.join(item.text for item in p)
+        except:
+            content = "Konten tidak Ditemukan"
 
 
         # comment
-        if self.config.get(web, 'iframefb') is not None:
-            iframe = self.driver.find_elements_by_xpath('.//iframe[@class="i-amphtml-fill-content"]')
-            self.driver.switch_to.default_content()
-            self.driver.switch_to.frame(iframe[5])
-            iframe = self.driver.find_element_by_xpath('.//iframe[1]')
-            self.driver.switch_to.frame(iframe)
-            comment = self.driver.find_element_by_xpath('.//span[@class=" _50f7"]')
+        try :
+            if self.config.get(web, 'iframefb') is not None:
+                iframe = self.driver.find_elements_by_xpath('.//iframe[@class="i-amphtml-fill-content"]')
+                self.driver.switch_to.default_content()
+                self.driver.switch_to.frame(iframe[5])
+                iframe = self.driver.find_element_by_xpath('.//iframe[1]')
+                self.driver.switch_to.frame(iframe)
+                comment = self.driver.find_element_by_xpath('.//span[@class=" _50f7"]')
 
-            if comment is not None:
-                comment_ = comment.text
+                if comment is not None:
+                    comment_ = comment.text
+                else:
+                    comment_ = "-"
             else:
                 comment_ = "-"
-        else:
-            comment_ = "-"
+        except:
+            comment_ = "Komentar tidak ditemukan"
+
         self.logger.info("comment : {}".format(comment_))
 
         # page
@@ -196,7 +215,7 @@ class newsParserData(object):
 
         self.logger.info("content : {}".format(content))
 
-        #self.db.insert_news(news_id, title, content, tanggal_, comment, share, editor_name, url)
+        self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
 
 class newsParsing(object):
