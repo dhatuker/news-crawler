@@ -13,8 +13,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
 
 class newsParserData(object):
-    URL = "https://www.krjogja.com/berita-terkini/"
-    #URL = "https://www.todayonline.com/singapore"
+    #URL = "https://www.krjogja.com/berita-terkini/"
+    URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
@@ -49,22 +49,29 @@ class newsParserData(object):
 
     def openLink(self):
         self.driver.get(self.URL)
-        self.driver.implicitly_wait(15)
-        time.sleep(5)
+        self.driver.implicitly_wait(30)
+        time.sleep(20)
         self.scroll_down()
+        time.sleep(5)
+        self.logger.info("start get link")
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
         return soup
 
     def scroll_down(self):
-        SCROLL_PAUSE_TIME = 5
+        a = 0
+        b = 2000
 
         for i in range(3):
-            # Scroll down to bottom     
-            self.driver.execute_script("window.scrollTo(0, 2000);")
+            # Scroll down to bottom
+            self.driver.execute_script("window.scrollTo({}, {});".format(a, b))
+            a = b
+            b += 2000
 
+            #implicity
+            self.driver.implicitly_wait(10)
             # Wait to load page
-            time.sleep(SCROLL_PAUSE_TIME)
+            time.sleep(10)
 
     def convertMonth(self, month, news_id):
         month = month.lower()
@@ -97,9 +104,6 @@ class newsParserData(object):
         elif 'todayonline' in self.URL:
             news_id = 2
             web = 'todayonline'
-            self.scroll_down()
-            time.sleep(5)
-
             regex = re.compile('article-listing_.\sfeatured')
             link = soup.find_all('div', class_=regex)
 
@@ -215,7 +219,7 @@ class newsParserData(object):
 
         self.logger.info("content : {}".format(content))
 
-        self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
+        #self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
 
 class newsParsing(object):
