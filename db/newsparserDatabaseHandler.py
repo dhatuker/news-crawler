@@ -65,3 +65,8 @@ class newsparserDatabaseHandler(object):
         rs = self._db.query(sql, news_id=news_id, title=title, content=content, tgl_terbit=tgl_terbit, comment=comment,
                             share=share, editor=editor, link=link)
         return rs
+
+    def get_url(self, input):
+        sql = """SELECT * FROM sumber_berita WHERE link_sumber LIKE '%:input%'"""
+        rs = self._db.query(sql, input=input)
+        return rs

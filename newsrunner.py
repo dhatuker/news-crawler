@@ -1,8 +1,10 @@
 from Lib.newsparser import newsParserData, newsParsing
+import sys
 
 def main():
+    input = sys.argv[1]
     news = newsParsing()
-    news.run()
+    news.run(input)
     del news
 
 

@@ -13,8 +13,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
 
 class newsParserData(object):
-    #URL = "https://www.krjogja.com/berita-terkini/"
-    URL = "https://www.todayonline.com/singapore"
+    URL = "https://www.krjogja.com/berita-terkini/"
+    #URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
@@ -47,16 +47,21 @@ class newsParserData(object):
     def __del__(self):
         self.driver.quit()
 
-    def openLink(self):
-        self.driver.get(self.URL)
-        self.driver.implicitly_wait(30)
-        time.sleep(20)
-        self.scroll_down()
-        time.sleep(5)
-        self.logger.info("start get link")
-        page_source = self.driver.page_source
-        soup = BeautifulSoup(page_source, 'lxml')
-        return soup
+    def openLink(self, input):
+
+        table = self.db.get_url(input)
+
+        print(table)
+
+        # self.driver.get(self.URL)
+        # self.driver.implicitly_wait(30)
+        # time.sleep(20)
+        # self.scroll_down()
+        # time.sleep(5)
+        # self.logger.info("start get link")
+        # page_source = self.driver.page_source
+        # soup = BeautifulSoup(page_source, 'lxml')
+        # return soup
 
     def scroll_down(self):
         a = 0
@@ -93,8 +98,8 @@ class newsParserData(object):
         year = output.group(3)
         return str(year) + "-" + str(month_) + "-" + str(date)
 
-    def getElement(self):
-        soup = self.openLink()
+    def getElement(self, input):
+        soup = self.openLink(input)
 
         if 'krjogja' in self.URL:
             news_id = 1
@@ -115,7 +120,7 @@ class newsParserData(object):
                 elif news_id == 2:
                     url = "https://www.todayonline.com" + news_link.get('href')
                 soup = self.openNewsLink(url)
-                self.findData(url, soup, news_id, web)
+                # self.findData(url, soup, news_id, web)
 
     def openNewsLink(self, url):
         self.driver.get(url)
@@ -219,7 +224,7 @@ class newsParserData(object):
 
         self.logger.info("content : {}".format(content))
 
-        #self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
+        self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
 
 class newsParsing(object):
@@ -277,14 +282,15 @@ class newsParsing(object):
             self.logger.handlers.append(loghandler)
         self.db = newsparserDatabaseHandler.instantiate_from_configparser(self.config, self.logger)
 
-    def run(self):
+    def run(self, input):
         start_time = time.time()
         self.init()
         self.hostname = socket.gethostname()
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
         self.newsParserData = newsParserData(db=self.db,
-                                             path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'), config=self.config, logger=self.logger)
-        self.newsParserData.getElement()
+                                             path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'),
+                                             config=self.config, logger=self.logger)
+        self.newsParserData.getElement(input)
         self.logger.info("Finish %s" % self.filename)
         print("--- %s seconds ---" % (time.time() - start_time))
