@@ -12,9 +12,10 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
 
+
 class newsParserData(object):
-    #URL = "https://www.krjogja.com/berita-terkini/"
-    URL = "https://www.todayonline.com/singapore"
+    # URL = "https://www.krjogja.com/berita-terkini/"
+    # URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
@@ -47,8 +48,8 @@ class newsParserData(object):
     def __del__(self):
         self.driver.quit()
 
-    def openLink(self):
-        self.driver.get(self.URL)
+    def openLink(self, url):
+        self.driver.get(url)
         self.driver.implicitly_wait(30)
         time.sleep(20)
         self.scroll_down()
@@ -68,7 +69,7 @@ class newsParserData(object):
             a = b
             b += 2000
 
-            #implicity
+            # implicity
             self.driver.implicitly_wait(10)
             # Wait to load page
             time.sleep(10)
@@ -79,9 +80,10 @@ class newsParserData(object):
                   'november', 'desember']
         months_en = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october',
                      'november', 'december']
-        if news_id == 1:
+
+        if months.count(month) > 0:
             return months.index(month) + 1
-        elif news_id == 2:
+        elif months_en.count(month) > 0:
             return months_en.index(month) + 1
 
     def toDate(self, input, news_id):
@@ -93,29 +95,33 @@ class newsParserData(object):
         year = output.group(3)
         return str(year) + "-" + str(month_) + "-" + str(date)
 
-    def getElement(self):
-        soup = self.openLink()
+    def getElement(self, input):
 
-        if 'krjogja' in self.URL:
-            news_id = 1
-            web = 'krjogja'
+        news = self.db.get_sumber(input)
+
+        # Get ID, URL, and REGEX
+        news_id = news[0][0]
+        url = news[0][1]
+        recompile = news[0][2]
+
+        soup = self.openLink(url)
+
+        if 'krjogja' in url:
             link = soup.find_all(lambda tag: tag.name == 'h4' and tag['class'] == ['post-list__title'])
 
-        elif 'todayonline' in self.URL:
-            news_id = 2
-            web = 'todayonline'
+        elif 'todayonline' in url:
             regex = re.compile('article-listing_.\sfeatured')
             link = soup.find_all('div', class_=regex)
 
         for i in link:
-            news_link = i.find('a', attrs={'href': re.compile(self.config.get(web, 'recompile'))})
+            news_link = i.find('a', attrs={'href': re.compile(recompile)})
             if news_link is not None:
-                if news_id == 1 :
+                if news_id == 1:
                     url = news_link.get('href')
                 elif news_id == 2:
                     url = "https://www.todayonline.com" + news_link.get('href')
                 soup = self.openNewsLink(url)
-                self.findData(url, soup, news_id, web)
+                self.findData(url, soup, news_id, news)
 
     def openNewsLink(self, url):
         self.driver.get(url)
@@ -126,87 +132,98 @@ class newsParserData(object):
         soup = BeautifulSoup(page_source, 'lxml')
         return soup
 
-    def findData(self, url, soup, news_id, web):
+    def findData(self, url, soup, news_id, news):
         self.logger.info("news_id : {}".format(news_id))
 
-        #title
+        # Get any Parameter for Parsing
+        title_tag = news[0][3]
+        title_class = news[0][4]
+        date_tag = news[0][5]
+        date_class = news[0][6]
+        editor_tag = news[0][7]
+        editor_class = news[0][8]
+        newscontent_tag = news[0][9]
+        newscontent_class = news[0][10]
+        page_tag = news[0][11]
+        page_class = news[0][12]
+        share_tag = news[0][13]
+        share_class = news[0][14]
+        iframe_comment = news[0][15]
+
+        # title
         try:
-            title = soup.find(self.config.get(web, 'title_tag'),
-                              class_= self.config.get(web, 'title_class')).text
-        except :
-            title = "Title tidak Ditemukan"
+            title = soup.find(title_tag, class_=title_class).text
+        except:
+            title = None
 
         self.logger.info("title : {}".format(title))
 
-        #editor
+        # editor
         try:
-            editor = soup.find(self.config.get(web, 'editor_tag'),
-                               class_= self.config.get(web, 'editor_class'))
+            editor = soup.find(editor_tag, class_=editor_class)
             if editor is not None:
                 editor_name = editor.text
+                self.logger.info("editor : {}".format(editor_name))
             else:
-                editor_name = "-"
+                editor_name = None
+                self.logger.info("there is no editor at all")
         except:
-            editor_name = "Nama Editor tidak Ditemukan"
+            editor_name = None
+            self.logger.info("error, editor is not loading yet")
 
-        self.logger.info("editor : {}".format(editor_name))
-
-        #tanggal
+        # tanggal
         try:
-            tanggal = soup.find(self.config.get(web, 'date_tag'),
-                                class_= self.config.get(web, 'date_class')).text
+            tanggal = soup.find(date_tag, class_=date_class).text
             tanggal_ = self.toDate(tanggal, news_id)
-        except :
-            tanggal_ = "Tanggal tidak Ditemukan"
-
-        self.logger.info("tanggal : {}".format(tanggal_))
-
-        #share
-        try:
-            if self.config.get(web, 'share_tag') is not None :
-                share = soup.find(self.config.get(web, 'share_tag'),
-                                  class_= self.config.get(web, 'share_class')).text
-            else :
-                share = "-"
+            self.logger.info("tanggal : {}".format(tanggal_))
         except:
-            share = "Share tidak Ditemukan"
+            tanggal_ = None
+            self.logger.info("error, tanggal is not loading yet")
 
-        self.logger.info("share : {}".format(share))
+        # share
+        try:
+            if share_tag is not None:
+                share = soup.find(share_tag, class_=share_class).text
+                self.logger.info("share : {}".format(share))
+            else:
+                share = None
+                self.logger.info("there is no share at all")
+        except:
+            share = None
+            self.logger.info("error, share is not loading yet")
 
-        #content
-        try :
-            news_content = soup.find(self.config.get(web, 'newscontent_tag'),
-                                     class_= self.config.get(web, 'newscontent_class'))
+        # content
+        try:
+            news_content = soup.find(newscontent_tag, class_=newscontent_class)
             p = news_content.find_all('p')
             content = ' '.join(item.text for item in p)
         except:
-            content = "Konten tidak Ditemukan"
-
+            content = None
 
         # comment
-        try :
-            if self.config.get(web, 'iframefb') is not None:
-                iframe = self.driver.find_elements_by_xpath('.//iframe[@class="i-amphtml-fill-content"]')
+        try:
+            if iframe_comment is not None:
+                iframe = self.driver.find_elements_by_xpath(iframe_comment)
                 self.driver.switch_to.default_content()
                 self.driver.switch_to.frame(iframe[5])
                 iframe = self.driver.find_element_by_xpath('.//iframe[1]')
                 self.driver.switch_to.frame(iframe)
                 comment = self.driver.find_element_by_xpath('.//span[@class=" _50f7"]')
-
                 if comment is not None:
                     comment_ = comment.text
+                    self.logger.info("comment found : {}".format(comment_))
                 else:
-                    comment_ = "-"
+                    comment_ = None
+                    self.logger.info("comment not found")
             else:
-                comment_ = "-"
+                comment_ = None
+                self.logger.info("no comment in this website")
         except:
-            comment_ = "Komentar tidak ditemukan"
-
-        self.logger.info("comment : {}".format(comment_))
+            comment_ = None
+            self.logger.info("error, comment does not load normally")
 
         # page
-        page = soup.find(self.config.get(web, 'page_tag'),
-                         class_=self.config.get(web, 'page_class'))
+        page = soup.find(page_tag, class_=page_class)
         if page is not None:
             paging_link = page.find_all(lambda tag: tag.name == 'a' and tag['class'] == ['post-page-numbers'])
             for i in range(len(paging_link) - 1):
@@ -219,7 +236,7 @@ class newsParserData(object):
 
         self.logger.info("content : {}".format(content))
 
-        #self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
+        # self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
 
 class newsParsing(object):
@@ -284,7 +301,8 @@ class newsParsing(object):
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
         self.newsParserData = newsParserData(db=self.db,
-                                             path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'), config=self.config, logger=self.logger)
-        self.newsParserData.getElement()
+                                             path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'),
+                                             config=self.config, logger=self.logger)
+        self.newsParserData.getElement('2')
         self.logger.info("Finish %s" % self.filename)
         print("--- %s seconds ---" % (time.time() - start_time))
