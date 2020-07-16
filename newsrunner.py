@@ -5,6 +5,5 @@ def main():
     news.run()
     del news
 
-
 if __name__ == '__main__':
     main()
