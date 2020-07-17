@@ -1,8 +1,10 @@
+import sys
+
 from Lib.newsparser import newsParserData, newsParsing
 
 def main():
     news = newsParsing()
-    news.run()
+    news.run(sys.argv[1])
     del news
 
 if __name__ == '__main__':

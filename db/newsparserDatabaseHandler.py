@@ -67,6 +67,6 @@ class newsparserDatabaseHandler(object):
         return rs
 
     def get_sumber(self, input):
-        sql = """SELECT * FROM sumber_berita WHERE id = :input """
-        rs = self._db.query(sql, input = input)
+        sql = """SELECT * FROM sumber_berita WHERE link_sumber LIKE :input"""
+        rs = self._db.query(sql, input=input)
         return rs

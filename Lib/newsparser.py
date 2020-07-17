@@ -2,7 +2,6 @@ import logbook
 import time
 import re
 import sys
-import argparse
 import configparser
 import os
 import socket
@@ -14,8 +13,6 @@ from selenium.webdriver.chrome.options import Options as ChromeOption
 
 
 class newsParserData(object):
-    # URL = "https://www.krjogja.com/berita-terkini/"
-    # URL = "https://www.todayonline.com/singapore"
     logger = None
     config = None
     driver = None
@@ -252,23 +249,8 @@ class newsParsing(object):
     def init(self):
 
         self.filename, file_extension = os.path.splitext(os.path.basename(__file__))
-
-        # parse argument
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--configdir", help="your config.ini directory", type=str)
-        parser.add_argument("--logdir", help="your log directory", type=str)
-        args = parser.parse_args()
-
-        # determine config directory
-        if args.configdir:
-            config_file = os.path.join(args.configdir, 'config.ini')
-        else:
-            config_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../config', 'config.ini')
-
-        if args.logdir:
-            log_file = os.path.join(args.logdir, '%s.log' % self.filename)
-        else:
-            log_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../logs', '%s.log' % self.filename)
+        config_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../config', 'config.ini')
+        log_file = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../logs', '%s.log' % self.filename)
 
         # load config
         self.config = configparser.ConfigParser(strict=False, allow_no_value=True)
@@ -294,7 +276,7 @@ class newsParsing(object):
             self.logger.handlers.append(loghandler)
         self.db = newsparserDatabaseHandler.instantiate_from_configparser(self.config, self.logger)
 
-    def run(self):
+    def run(self, web):
         start_time = time.time()
         self.init()
         self.hostname = socket.gethostname()
@@ -303,6 +285,6 @@ class newsParsing(object):
         self.newsParserData = newsParserData(db=self.db,
                                              path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'),
                                              config=self.config, logger=self.logger)
-        self.newsParserData.getElement('2')
+        self.newsParserData.getElement(web)
         self.logger.info("Finish %s" % self.filename)
         print("--- %s seconds ---" % (time.time() - start_time))
