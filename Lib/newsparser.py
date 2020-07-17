@@ -34,6 +34,14 @@ class newsParserData(object):
 
         self.driver = webdriver.Chrome(path_to_webdriver, chrome_options=chrome_options)
 
+        PROXY = "<HOST:PORT>"
+        webdriver.DesiredCapabilities.CHROME['proxy'] = {
+            "httpProxy": PROXY,
+            "ftpProxy": PROXY,
+            "sslProxy": PROXY,
+            "proxyType": "MANUAL",
+        }
+
         if cookies is None:
             self.cookies = self.driver.get_cookies()
         else:
@@ -156,10 +164,11 @@ class newsParserData(object):
         self.logger.info("title : {}".format(title))
 
         # editor
+        re_editor = r".*?\:\s"
         try:
             editor = soup.find(editor_tag, class_=editor_class)
             if editor is not None:
-                editor_name = editor.text
+                editor_name = re.sub(re_editor, "", editor.text)
                 self.logger.info("editor : {}".format(editor_name))
             else:
                 editor_name = None
@@ -233,7 +242,7 @@ class newsParserData(object):
 
         self.logger.info("content : {}".format(content))
 
-        # self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
+        self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
 
 class newsParsing(object):
