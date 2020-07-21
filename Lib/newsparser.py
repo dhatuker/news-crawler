@@ -6,7 +6,9 @@ import configparser
 import os
 import socket
 
-from db.newsparserDatabaseHandler import NewsparserDatabaseHandler
+from db.NewsparserDatabaseHandler import NewsparserDatabaseHandler
+from Lib.NewsHelper import Helper
+
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
@@ -67,48 +69,13 @@ class NewsParserData(object):
         self.driver.get(url)
         self.driver.implicitly_wait(30)
         time.sleep(20)
-        self.scroll_down()
+        Helper.scroll_down(self.driver)
         time.sleep(5)
         self.logger.info("start get link")
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
         return soup
 
-    def scroll_down(self):
-        a = 0
-        b = 2000
-
-        for i in range(3):
-            # Scroll down to bottom
-            self.driver.execute_script("window.scrollTo({}, {});".format(a, b))
-            a = b
-            b += 2000
-
-            # implicity
-            self.driver.implicitly_wait(10)
-            # Wait to load page
-            time.sleep(10)
-
-    def convertMonth(self, month, news_id):
-        month = month.lower()
-        months = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober',
-                  'november', 'desember']
-        months_en = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october',
-                     'november', 'december']
-
-        if months.count(month) > 0:
-            return months.index(month) + 1
-        elif months_en.count(month) > 0:
-            return months_en.index(month) + 1
-
-    def toDate(self, input, news_id):
-        re_date = r"(\d{1,2}) ([A-Za-z]+).? (\d{4})"
-        output = re.search(re_date, input)
-        date = output.group(1)
-        month = output.group(2)
-        month_ = self.convertMonth(month, news_id)
-        year = output.group(3)
-        return str(year) + "-" + str(month_) + "-" + str(date)
 
     def getElement(self, input):
 
@@ -142,7 +109,7 @@ class NewsParserData(object):
         self.driver.get(url)
         self.driver.implicitly_wait(5)
         time.sleep(3)
-        self.scroll_down()
+        Helper.scroll_down(self.driver)
         page_source = self.driver.page_source
         soup = BeautifulSoup(page_source, 'lxml')
         return soup
@@ -190,7 +157,7 @@ class NewsParserData(object):
         # tanggal
         try:
             tanggal = soup.find(date_tag, class_=date_class).text
-            tanggal_ = self.toDate(tanggal, news_id)
+            tanggal_ = Helper.toDate(tanggal)
             self.logger.info("tanggal : {}".format(tanggal_))
         except:
             tanggal_ = None
@@ -252,7 +219,7 @@ class NewsParserData(object):
 
         self.logger.info("content : {}".format(content))
 
-        #self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
+        self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
 
 class NewsParsing(object):
