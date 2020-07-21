@@ -1,9 +1,9 @@
 import sys
 
-from Lib.newsparser import newsParserData, newsParsing
+from Lib.newsparser import NewsParserData, NewsParsing
 
 def main():
-    news = newsParsing()
+    news = NewsParsing()
     news.run(sys.argv[1])
     del news
 

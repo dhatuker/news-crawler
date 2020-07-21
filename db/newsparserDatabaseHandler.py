@@ -3,8 +3,7 @@ import logging
 
 import records
 
-
-class newsparserDatabaseHandler(object):
+class NewsparserDatabaseHandler(object):
     _instance = None
     _db = None
     _host = None
@@ -15,7 +14,7 @@ class newsparserDatabaseHandler(object):
     logger = None
 
     def getInstance(_host, _port, _user, _pass, _dbname):
-        return newsparserDatabaseHandler(_host, _port, _user, _pass, _dbname)
+        return NewsparserDatabaseHandler(_host, _port, _user, _pass, _dbname)
 
     def __init__(self, _host, _port, _user, _pass, _dbname):
         self._host = _host
@@ -25,7 +24,7 @@ class newsparserDatabaseHandler(object):
         self._dbname = _dbname
         self.logger = logging.getLogger()
         self.connect()
-        newsparserDatabaseHandler._instance = self
+        NewsparserDatabaseHandler._instance = self
 
     def setLogger(self, logger):
         self.logger = logger
@@ -42,14 +41,14 @@ class newsparserDatabaseHandler(object):
             db_version = rs[0].ver
         # except sqlalchemy.exc.OperationalError as error:
         #     self.logger.info('Error: connection not established {}'.format(error))
-        newsparserDatabaseHandler._instance = None
+        NewsparserDatabaseHandler._instance = None
         # else:
         self.logger.debug('connection established: {}'.format(db_version))
 
     @staticmethod
     def instantiate_from_configparser(cfg, logger):
         if isinstance(cfg, configparser.ConfigParser):
-            dbhandler = newsparserDatabaseHandler.getInstance(cfg.get('Database', 'host'),
+            dbhandler = NewsparserDatabaseHandler.getInstance(cfg.get('Database', 'host'),
                                                                cfg.get('Database', 'port'),
                                                                cfg.get('Database', 'username'),
                                                                cfg.get('Database', 'password'),

@@ -6,13 +6,14 @@ import configparser
 import os
 import socket
 
-from db.newsparserDatabaseHandler import newsparserDatabaseHandler
+from db.newsparserDatabaseHandler import NewsparserDatabaseHandler
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOption
+from http_request_randomizer.requests.proxy.requestProxy import RequestProxy
 
 
-class newsParserData(object):
+class NewsParserData(object):
     logger = None
     config = None
     driver = None
@@ -29,12 +30,21 @@ class newsParserData(object):
         prefs = {"profile.default_content_setting_values.notifications": 2}
         chrome_options.add_experimental_option("prefs", prefs)
 
+        # ignore error proxy
+        chrome_options.add_argument('--ignore-certificate-errors')
+        chrome_options.add_argument('--ignore-ssl-errors')
+
         # automatically dismiss prompt
         chrome_options.set_capability('unhandledPromptBehavior', 'dismiss')
 
         self.driver = webdriver.Chrome(path_to_webdriver, chrome_options=chrome_options)
 
-        PROXY = "<HOST:PORT>"
+        # get PROXY
+        req_proxy = RequestProxy()
+        proxies = req_proxy.get_proxy_list()
+
+        # set PROXY
+        PROXY = proxies[0].get_address()
         webdriver.DesiredCapabilities.CHROME['proxy'] = {
             "httpProxy": PROXY,
             "ftpProxy": PROXY,
@@ -105,9 +115,9 @@ class newsParserData(object):
         news = self.db.get_sumber(input)
 
         # Get ID, URL, and REGEX
-        news_id = news[0][0]
-        url = news[0][1]
-        recompile = news[0][2]
+        news_id = news[0]['id']
+        url = news[0]['link_sumber']
+        recompile = news[0]['recompile']
 
         soup = self.openLink(url)
 
@@ -141,19 +151,19 @@ class newsParserData(object):
         self.logger.info("news_id : {}".format(news_id))
 
         # Get any Parameter for Parsing
-        title_tag = news[0][3]
-        title_class = news[0][4]
-        date_tag = news[0][5]
-        date_class = news[0][6]
-        editor_tag = news[0][7]
-        editor_class = news[0][8]
-        newscontent_tag = news[0][9]
-        newscontent_class = news[0][10]
-        page_tag = news[0][11]
-        page_class = news[0][12]
-        share_tag = news[0][13]
-        share_class = news[0][14]
-        iframe_comment = news[0][15]
+        title_tag = news[0]['title_tag']
+        title_class = news[0]['title_class']
+        date_tag = news[0]['date_tag']
+        date_class = news[0]['date_class']
+        editor_tag = news[0]['editor_tag']
+        editor_class = news[0]['editor_class']
+        newscontent_tag = news[0]['newscontent_tag']
+        newscontent_class = news[0]['newscontent_class']
+        page_tag = news[0]['page_tag']
+        page_class = news[0]['page_class']
+        share_tag = news[0]['share_tag']
+        share_class = news[0]['share_class']
+        iframe_comment = news[0]['iframe_comment']
 
         # title
         try:
@@ -242,10 +252,10 @@ class newsParserData(object):
 
         self.logger.info("content : {}".format(content))
 
-        self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
+        #self.db.insert_news(news_id, title, content, tanggal_, comment_, share, editor_name, url)
 
 
-class newsParsing(object):
+class NewsParsing(object):
     config = None
     logger = None
     filename = ""
@@ -283,7 +293,7 @@ class newsParsing(object):
                                                           date_format='%Y%m%d', backup_count=5, bubble=True,
                                                           format_string=format_string)
             self.logger.handlers.append(loghandler)
-        self.db = newsparserDatabaseHandler.instantiate_from_configparser(self.config, self.logger)
+        self.db = NewsparserDatabaseHandler.instantiate_from_configparser(self.config, self.logger)
 
     def run(self, web):
         start_time = time.time()
@@ -291,7 +301,7 @@ class newsParsing(object):
         self.hostname = socket.gethostname()
         self.hostip = socket.gethostbyname(self.hostname)
         self.logger.info("Starting {} on {}".format(type(self).__name__, self.hostname))
-        self.newsParserData = newsParserData(db=self.db,
+        self.newsParserData = NewsParserData(db=self.db,
                                              path_to_webdriver=self.config.get('Selenium', 'chromedriver_path'),
                                              config=self.config, logger=self.logger)
         self.newsParserData.getElement(web)
