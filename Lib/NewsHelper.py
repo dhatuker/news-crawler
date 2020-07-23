@@ -1,8 +1,6 @@
 import re
 import time
 
-from selenium import webdriver
-
 class Helper(object):
 
     @staticmethod
