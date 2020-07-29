@@ -40,3 +40,9 @@ class Helper(object):
             month = months_en.index(month) + 1
 
         return str(year) + "-" + str(month) + "-" + str(date)
+
+    @staticmethod
+    def getNumber(input):
+        re_number = r"\d"
+        output = re.find(re_number, input)
+        return output
