@@ -167,8 +167,8 @@ class NewsParserData(object):
         try:
             if share_tag is not None:
                 share = soup.find(share_tag, class_=share_class).text
-                self.logger.info("share : {}".format(share))
                 share_ = Helper.getNumber(share)
+                self.logger.info("share : {}".format(share_))
             else:
                 share_ = None
                 self.logger.info("there is no share at all")
@@ -195,8 +195,8 @@ class NewsParserData(object):
                 comment = self.driver.find_element_by_xpath('.//span[@class=" _50f7"]')
                 if comment is not None:
                     comment = comment.text
-                    self.logger.info("comment found : {}".format(comment))
                     comment_ = Helper.getNumber(comment)
+                    self.logger.info("comment found : {}".format(comment_))
                 else:
                     comment_ = None
                     self.logger.info("comment not found")

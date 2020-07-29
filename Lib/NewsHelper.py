@@ -43,6 +43,5 @@ class Helper(object):
 
     @staticmethod
     def getNumber(input):
-        re_number = r"\d"
-        output = re.find(re_number, input)
+        output = input.lower().replace(' comments','').replace(' shares', '')
         return output
